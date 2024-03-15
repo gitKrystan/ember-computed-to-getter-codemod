@@ -1,0 +1,46 @@
+{
+  "name": "ember-computed-to-getter-codemod",
+  "version": "0.0.0",
+  "description": "Convert Ember @computed properties in native classes to getters/setters",
+  "type": "module",
+  "bin": "./bin/cli.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "globby": "^14.0.1",
+    "jest": "^29.7.0",
+    "jscodeshift": "^0.15.2",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-jsdoc": "^48.2.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-unicorn": "^51.0.1",
+    "prettier": "^3.2.5"
+  },
+  "scripts": {
+    "test": "jest",
+    "clean": "tsc --build --clean && git checkout test/fixtures",
+    "lint": "concurrently \"npm:lint:*(!fix)\" --names \"lint:\"",
+    "lint:fix": "concurrently \"npm:lint:*:fix\" --names \"fix:\"",
+    "lint:js:fix": "eslint . --fix",
+    "lint:js": "eslint . --cache",
+    "lint:prettier:fix": "prettier --write .",
+    "lint:prettier": "prettier --check .",
+    "lint:ts": "tsc --noEmit"
+  },
+  "keywords": [
+    "ember",
+    "codemod"
+  ],
+  "author": "gitKrystan",
+  "license": "MIT"
+}
