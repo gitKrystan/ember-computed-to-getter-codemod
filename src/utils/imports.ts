@@ -1,16 +1,16 @@
-import type { Collection, JSCodeshift } from 'jscodeshift';
+import type { Collection, ImportSpecifier, JSCodeshift } from 'jscodeshift';
 
 /**
  * Find and remove all `import { computed } from '@ember/object'` specifiers.
  *
- * @returns {boolean} whether any computed specifiers were removed
+ * @returns {string | null} The local name of the `computed` specifier if it was removed, or `null` if it was not found.
  */
 export function removeComputedSpecifier(
   j: JSCodeshift,
-  collection: Collection,
-): boolean {
-  let hadComputedSpecifier = false;
-  collection
+  root: Collection,
+): string | null {
+  let computedName: string | null = null;
+  root
     .find(j.ImportDeclaration, {
       source: {
         value: '@ember/object',
@@ -23,40 +23,48 @@ export function removeComputedSpecifier(
         return;
       }
 
-      const computedSpecifiers = specifiers.filter((specifier) => {
-        return (
-          'imported' in specifier && specifier.imported.name === 'computed'
-        );
-      });
+      const computedSpecifiers = specifiers.filter(
+        (specifier): specifier is ImportSpecifier =>
+          specifier.type === 'ImportSpecifier' &&
+          specifier.imported.name === 'computed',
+      );
 
-      if (computedSpecifiers.length > 0) {
+      if (computedSpecifiers.length > 1) {
+        throw new Error(
+          'Found more than one `computed` specifier. @gitKrystan assumed this was not possible.',
+        );
+      }
+      const [computedSpecifier] = computedSpecifiers;
+
+      if (computedSpecifier) {
         if (specifiers.length === 1) {
           // remove the entire import declaration
           j(path).remove();
         } else {
           // remove just the computed specifier
           importDeclaration.specifiers = specifiers.filter((specifier) => {
-            return !computedSpecifiers.includes(specifier);
+            return !(computedSpecifiers as unknown[]).includes(specifier);
           });
         }
-        hadComputedSpecifier = true;
+        computedName =
+          computedSpecifier.local?.name ?? computedSpecifier.imported.name;
       }
     });
 
-  return hadComputedSpecifier;
+  return computedName;
 }
 
 export function addDependentKeyCompatImport(
   j: JSCodeshift,
-  root: Collection<any>,
-) {
+  root: Collection,
+): void {
   // Check if the import already exists
   const existingImport = root.find(j.ImportDeclaration, {
     source: {
       value: '@ember/object/compat',
     },
   });
-  debugger;
+
   if (existingImport.length === 0) {
     // If it doesn't exist, add the import to the end of the existing imports
     const lastImport = root.find(j.ImportDeclaration).at(-1);

@@ -3,15 +3,17 @@ import {
   addDependentKeyCompatImport,
   removeComputedSpecifier,
 } from './utils/imports';
+import { transformComputedClassMethods } from './utils/class-method';
 
 export default function transformer(file: FileInfo, api: API) {
   const j = api.jscodeshift;
   const root = j(file.source);
 
-  const hadComputedSpecifier = removeComputedSpecifier(j, root);
+  const removedComputedName = removeComputedSpecifier(j, root);
 
-  if (hadComputedSpecifier) {
+  if (removedComputedName) {
     addDependentKeyCompatImport(j, root);
+    transformComputedClassMethods(j, root, removedComputedName);
   }
 
   // TODO: Make quote configurable or pull from prettierrc

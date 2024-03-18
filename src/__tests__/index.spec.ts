@@ -10,3 +10,7 @@ describe('imports', () => {
   makeTest('imports/already-has-dependent-key-compat');
   makeTest('imports/already-has-dependent-key-compat-2');
 });
+
+describe('class-method', () => {
+  makeTest('class-method/simple-class-method');
+});
