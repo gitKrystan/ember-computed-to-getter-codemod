@@ -17,6 +17,9 @@
     "typescript": "^5.4.2"
   },
   "devDependencies": {
+    "@types/jest": "29.5.12",
+    "@types/jscodeshift": "0.11.11",
+    "@types/node": "^20.11.27",
     "concurrently": "^8.2.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
