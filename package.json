@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "description": "Convert Ember @computed properties in native classes to getters/setters",
   "type": "module",
-  "bin": "./bin/cli.js",
+  "bin": {
+    "ember-computed-to-getter-codemod": "./bin/cli.js"
+  },
   "directories": {
     "doc": "docs",
     "example": "examples"

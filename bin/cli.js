@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { program, Option } from 'commander';
 import { globby } from 'globby';
 import { run as jscodeshift } from 'jscodeshift/src/Runner.js';

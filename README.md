@@ -3,7 +3,7 @@
 ## Usage
 
 ```shell
-npx github:gitKrystan/ember-computed-to-getter-codemod app/**/*.js
+bunx github:gitKrystan/ember-computed-to-getter-codemod app/**/*.js
 ```
 
 ## Development
