@@ -1,4 +1,4 @@
-import { computed } from 'somewhere-else';
+import { computed } from '@ember/object';
 import { attr } from '@ember-data/model';
 
 class Foo {

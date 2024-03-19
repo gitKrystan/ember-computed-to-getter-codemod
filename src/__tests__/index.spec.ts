@@ -15,7 +15,11 @@ function findAllTestFixturesSync(dir: string, fileList: string[] = []) {
   return fileList;
 }
 
-function runTests() {
+interface RunTestsOptions {
+  only?: string;
+}
+
+function runTests({ only }: RunTestsOptions = {}) {
   const fixturesPath = path.join(__dirname, '..', '__testfixtures__');
   const inputFiles = findAllTestFixturesSync(fixturesPath);
 
@@ -24,6 +28,13 @@ function runTests() {
       const relativePath = path.relative(fixturesPath, filePath);
       const category = relativePath.split(path.sep).slice(0, -1).join(path.sep);
       const testName = path.basename(relativePath).replace('.input.ts', '');
+      const fullPath = `${category}/${testName}`;
+
+      // If `only` is specified and does not match the current path, skip adding this test
+      if (only && only !== fullPath) {
+        return acc;
+      }
+
       if (!acc[category]) {
         acc[category] = [];
       }
@@ -44,4 +55,8 @@ function runTests() {
   });
 }
 
-runTests();
+// prettier-ignore
+runTests(
+  // Uncomment to test only a specific fixture
+  // { only: 'class-property/simple-class-method' },
+);

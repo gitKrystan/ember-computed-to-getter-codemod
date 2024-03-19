@@ -1,10 +1,11 @@
+import { computed } from '@ember/object';
 import { attr } from '@ember-data/model';
-import { dependentKeyCompat } from '@ember/object/compat';
 
 class Foo {
   @attr('string') declare bar: string;
 
-  get aliasBar() {
+  @computed('bar', function () {
     return this.bar;
-  }
+  })
+  aliasBar;
 }
