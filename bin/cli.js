@@ -2,11 +2,18 @@
 import { program, Option } from 'commander';
 import { globby } from 'globby';
 import { run as jscodeshift } from 'jscodeshift/src/Runner.js';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Convert the URL of the current module to a file path.
+const __filename = fileURLToPath(import.meta.url);
+// Use dirname to get the directory path of the current module.
+const __dirname = dirname(__filename);
 
 async function run(filePath, options) {
   const paths = await globby(filePath);
-  const transformPath = resolve('./src/index.ts');
+  // Resolve the transformPath relative to __dirname, ensuring it's based on the CLI script location
+  const transformPath = resolve(__dirname, './src/index.ts');
   const result = await jscodeshift(transformPath, paths, options);
   if (options.verbose === '2') {
     console.log('options', options);
@@ -28,7 +35,6 @@ program
       .choices(['0', '1', '2'])
       .default('0'),
   )
-
   .allowUnknownOption() // to passthrough jscodeshift options
   .action(run);
 
