@@ -1,4 +1,3 @@
-import { execSync } from 'child_process'; // Not used in the snippet provided but assumed to be part of the original context
 import { program, Option } from 'commander';
 import { globby } from 'globby';
 import { run as jscodeshift } from 'jscodeshift/src/Runner.js';
