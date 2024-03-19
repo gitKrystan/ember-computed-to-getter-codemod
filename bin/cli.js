@@ -12,8 +12,7 @@ const __dirname = dirname(__filename);
 
 async function run(filePath, options) {
   const paths = await globby(filePath);
-  // Resolve the transformPath relative to __dirname, ensuring it's based on the CLI script location
-  const transformPath = resolve(__dirname, './src/index.ts');
+  const transformPath = resolve(__dirname, '../src/index.ts');
   const result = await jscodeshift(transformPath, paths, options);
   if (options.verbose === '2') {
     console.log('options', options);
