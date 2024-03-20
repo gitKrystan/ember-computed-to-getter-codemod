@@ -1,4 +1,4 @@
-import type { API, FileInfo, Options } from 'jscodeshift';
+import type { API, Collection, FileInfo, Options } from 'jscodeshift';
 import {
   addDependentKeyCompatImport,
   removeComputedSpecifier,
@@ -7,15 +7,16 @@ import { transformComputedClassMethods } from './utils/class-method';
 import { transformComputedClassProperties } from './utils/class-property';
 
 export default function transformer(
-  file: FileInfo,
+  fileOrCollection: FileInfo | Collection,
   api: API,
   options: Options,
 ) {
-  if (options.verbose === '2') {
-    console.log('Running transform on file:', file.path);
-  }
   const j = api.jscodeshift;
-  const root = j(file.source);
+  // HACKS so I don't have to rewrite the tests
+  const root =
+    'source' in fileOrCollection
+      ? j(fileOrCollection.source)
+      : fileOrCollection;
 
   const removedComputedName = removeComputedSpecifier(j, root);
 
