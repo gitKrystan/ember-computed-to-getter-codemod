@@ -7,6 +7,7 @@ class Foo {
   // Decorator leading
   // FunctionExpression leading
   // FunctionExpression trailing
+  // Decorator inline
   // Key leading / Decorator trailing
   @dependentKeyCompat
   get aliasBar() {

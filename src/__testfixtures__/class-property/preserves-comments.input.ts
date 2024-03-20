@@ -13,7 +13,7 @@ class Foo {
       return this.bar;
     },
     // FunctionExpression trailing
-  )
+  ) // Decorator inline
   // Key leading / Decorator trailing
   aliasBar; // Key inline
   // Key trailing
