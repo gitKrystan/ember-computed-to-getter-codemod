@@ -13,6 +13,10 @@ const __dirname = dirname(__filename);
 async function run(filePath, options) {
   const paths = await globby(filePath);
   const transformPath = resolve(__dirname, '../src/index.ts');
+  if (options.verbose === '2') {
+    console.log('transformPath', transformPath);
+    console.log('paths', paths);
+  }
   const result = await jscodeshift(transformPath, paths, options);
   if (options.verbose === '2') {
     console.log('options', options);

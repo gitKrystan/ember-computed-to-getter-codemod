@@ -72,15 +72,41 @@ export function transformComputedClassProperties(
         dependentKeyCompat,
       ) as [ComputedDecoratorForClassProperty];
 
+      const functionExpressionCopy: Partial<FunctionExpression> &
+        Pick<FunctionExpression, 'body'> = {
+        ...(computedDecorator.expression.arguments.at(
+          -1,
+        ) as FunctionExpression),
+      };
+      delete functionExpressionCopy.type;
+
+      const comments = Array.from(
+        new Set([
+          ...(computedDecorator.comments ?? []),
+          // @ts-expect-error jscodeshift types are wrong
+          ...(functionExpressionCopy.leadingComments ?? []),
+          // @ts-expect-error jscodeshift types are wrong
+          ...(functionExpressionCopy.trailingComments ?? []),
+          ...(classProperty.comments ?? []),
+          // @ts-expect-error jscodeshift types are wrong
+          ...(classProperty.key.leadingComments ?? []),
+        ]),
+      ).sort((a, b) => {
+        if (a.loc && b.loc) {
+          return a.loc.start.line - b.loc.start.line;
+        } else {
+          return 0;
+        }
+      });
+
       // Replace the ClassProperty with a getter containing the body from the FunctionExpression pulled out of the ComputedDecoratorForClassProperty
       const getter = j.classMethod.from({
+        ...functionExpressionCopy,
         kind: 'get',
-        key: classProperty.key,
+        key: { ...classProperty.key, comments: null },
         params: [],
-        body: (
-          computedDecorator.expression.arguments.at(-1) as FunctionExpression
-        ).body,
         decorators: classProperty.decorators,
+        comments,
       });
       path.replace(getter);
     }

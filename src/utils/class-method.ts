@@ -54,20 +54,22 @@ export function transformComputedClassMethods(
       return;
     }
 
-    const computedDecoratorIndex = classMethod.decorators.findIndex(
+    const computedDecorator = classMethod.decorators.find(
       isComputedDecoratorForClassMethod,
     );
 
-    if (computedDecoratorIndex > -1) {
+    if (computedDecorator) {
       // Replace the `@computed` decorator with `@dependentKeyCompat`
-      const dependentKeyCompat = j.decorator(
-        j.identifier('dependentKeyCompat'),
-      );
+      const dependentKeyCompat = j.decorator.from({
+        expression: j.identifier('dependentKeyCompat'),
+        comments: computedDecorator.comments ?? null,
+      });
+
       classMethod.decorators.splice(
-        computedDecoratorIndex,
+        classMethod.decorators.indexOf(computedDecorator),
         1,
         dependentKeyCompat,
-      );
+      ) as [ComputedDecoratorForClassMethod];
     }
   });
 }
