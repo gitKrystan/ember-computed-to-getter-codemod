@@ -1,16 +1,23 @@
 import type { API, Collection, FileInfo, Options } from 'jscodeshift';
-import {
-  addDependentKeyCompatImport,
-  removeComputedSpecifier,
-} from './utils/imports';
 import { transformComputedClassMethods } from './utils/class-method';
 import { transformComputedClassProperties } from './utils/class-property';
+import {
+  addImport,
+  parseImports,
+  removeImport,
+  type ExistingImportsWithComputed,
+  type Import,
+} from './utils/imports';
+import { logger } from './utils/log';
+import { TransformResult } from './utils/result';
 
 export default function transformer(
   fileOrCollection: FileInfo | Collection,
   api: API,
   options: Options,
 ) {
+  logger.config(options);
+
   const j = api.jscodeshift;
   // HACKS so I don't have to rewrite the tests
   const root =
@@ -18,23 +25,39 @@ export default function transformer(
       ? j(fileOrCollection.source)
       : fileOrCollection;
 
-  const removedComputedName = removeComputedSpecifier(j, root);
+  const existingImports = parseImports(j, root);
 
-  if (removedComputedName) {
-    if (options.verbose === '2') {
-      console.log('removedComputedName', removedComputedName);
-      console.log('adding dependentKeyCompat import');
+  if (existingImports.computed) {
+    logger.debug('computed localName', existingImports.computed.localName);
+
+    const result = new TransformResult();
+
+    result.merge(
+      transformComputedClassMethods(
+        j,
+        root,
+        existingImports as ExistingImportsWithComputed,
+      ),
+    );
+
+    result.merge(
+      transformComputedClassProperties(
+        j,
+        root,
+        existingImports as ExistingImportsWithComputed,
+      ),
+    );
+
+    for (const importToAdd of result.importsToAdd) {
+      if (existingImports[importToAdd.importedName] === null) {
+        addImport(j, root, importToAdd);
+      }
     }
-    addDependentKeyCompatImport(j, root);
-    if (options.verbose === '2') {
-      console.log('transforming computed class methods');
-    }
-    transformComputedClassMethods(j, root, removedComputedName);
-    if (options.verbose === '2') {
-      console.log('transforming computed class properties');
-    }
-    transformComputedClassProperties(j, root, removedComputedName);
+
+    removeImport(j, existingImports.computed);
   }
+
+  logger.debug('no computed import found');
 
   // TODO: Make quote configurable or pull from prettierrc
   return root.toSource({ quote: 'single' });

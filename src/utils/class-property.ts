@@ -1,27 +1,31 @@
 import type {
-  Collection,
-  JSCodeshift,
   CallExpression,
-  Decorator,
-  Identifier,
-  StringLiteral,
-  FunctionExpression,
   ClassProperty,
+  Collection,
+  Decorator,
+  FunctionExpression,
+  Identifier,
+  JSCodeshift,
+  StringLiteral,
 } from 'jscodeshift';
+import { IMPORTS, type ExistingImportsWithComputed } from './imports';
+import { logger } from './log';
+import { TransformResult } from './result';
 
-type ComputedDecoratorForClassProperty = Decorator & {
+// @computed('foo', 'bar', function(), {})
+type ComputedDecorator = Decorator & {
   expression: CallExpression & {
     callee: Identifier;
     arguments: [...StringLiteral[], FunctionExpression & { params: [] }];
   };
 };
 
-function computedDecoratorForClassPropertyPredicate(
+function computedDecoratorPredicate(
   computedName: string,
-): (decorator: Decorator) => decorator is ComputedDecoratorForClassProperty {
-  return function isComputedDecoratorForClassProperty(
+): (decorator: Decorator) => decorator is ComputedDecorator {
+  return function isComputedDecorator(
     decorator,
-  ): decorator is ComputedDecoratorForClassProperty {
+  ): decorator is ComputedDecorator {
     return (
       decorator.expression.type === 'CallExpression' &&
       decorator.expression.callee.type === 'Identifier' &&
@@ -36,17 +40,22 @@ function computedDecoratorForClassPropertyPredicate(
 }
 
 type ComputedClassProperty = ClassProperty & {
-  decorators: Array<Decorator | ComputedDecoratorForClassProperty>;
+  decorators: Array<Decorator | ComputedDecorator>;
   value: null;
 };
 
 export function transformComputedClassProperties(
   j: JSCodeshift,
   root: Collection,
-  computedName: string,
-): void {
-  const isComputedDecoratorForClassProperty =
-    computedDecoratorForClassPropertyPredicate(computedName);
+  existingImportInfos: ExistingImportsWithComputed,
+): TransformResult {
+  logger.debug('transforming computed class properties');
+
+  const isComputedDecoratorForClassProperty = computedDecoratorPredicate(
+    existingImportInfos.computed.localName,
+  );
+
+  const result = new TransformResult();
 
   root.find(j.ClassProperty).forEach((path) => {
     const value = path.value;
@@ -57,20 +66,31 @@ export function transformComputedClassProperties(
     }
     const classProperty = value as ComputedClassProperty;
 
-    const computedDecoratorIndex = classProperty.decorators.findIndex(
+    const computedDecorator = classProperty.decorators.find(
       isComputedDecoratorForClassProperty,
     );
 
-    if (computedDecoratorIndex > -1) {
-      // Replace the `@computed` decorator with `@dependentKeyCompat`
-      const dependentKeyCompat = j.decorator(
-        j.identifier('dependentKeyCompat'),
-      );
-      const [computedDecorator] = classProperty.decorators.splice(
-        computedDecoratorIndex,
-        1,
-        dependentKeyCompat,
-      ) as [ComputedDecoratorForClassProperty];
+    if (computedDecorator) {
+      if (computedDecorator.expression.arguments.length === 1) {
+        // Replace the `@computed` decorator with `@cached`
+        replaceComputedDecorator(
+          j,
+          computedDecorator,
+          classProperty,
+          existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName,
+        );
+        result.importsToAdd.add(IMPORTS.cached);
+      } else {
+        // Replace the `@computed` decorator with `@dependentKeyCompat`
+        replaceComputedDecorator(
+          j,
+          computedDecorator,
+          classProperty,
+          existingImportInfos.dependentKeyCompat?.localName ??
+            IMPORTS.dependentKeyCompat.importedName,
+        );
+        result.importsToAdd.add(IMPORTS.dependentKeyCompat);
+      }
 
       const functionExpressionCopy: Partial<FunctionExpression> &
         Pick<FunctionExpression, 'body'> = {
@@ -111,4 +131,28 @@ export function transformComputedClassProperties(
       path.replace(getter);
     }
   });
+
+  return result;
+}
+
+function replaceComputedDecorator(
+  j: JSCodeshift,
+  computedDecorator: ComputedDecorator,
+  classProperty: ClassProperty,
+  newDecoratorName: string,
+): void {
+  // HACK jscodeshift ClassProperty types don't know about the decorators key, but it's there
+  if (!('decorators' in classProperty) || !classProperty.decorators) {
+    throw new Error(
+      'trying to replace a decorator on a property without decorators',
+    );
+  }
+
+  const dependentKeyCompat = j.decorator(j.identifier(newDecoratorName));
+
+  (classProperty.decorators as Decorator[]).splice(
+    (classProperty.decorators as Decorator[]).indexOf(computedDecorator),
+    1,
+    dependentKeyCompat,
+  );
 }
