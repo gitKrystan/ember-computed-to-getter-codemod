@@ -1,6 +1,7 @@
 import { defineTest } from 'jscodeshift/src/testUtils';
 import fs from 'node:fs';
 import path from 'node:path';
+import { logger } from '../utils/log';
 
 function findAllTestFixturesSync(
   dir: string,
@@ -53,9 +54,9 @@ function runTests({ only }: RunTestsOptions = {}) {
 
   Object.entries(testsByCategory).forEach(([category, tests]) => {
     describe(category.replace(path.sep, ' > '), () => {
-      tests.forEach(({ testName, ext }) => {
+      tests.forEach(({ testName }) => {
         defineTest(__dirname, './index', null, `${category}/${testName}`, {
-          parser: ext === '.ts' ? 'ts' : 'babylon',
+          parser: 'ts',
         });
       });
     });

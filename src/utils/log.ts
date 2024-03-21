@@ -7,6 +7,10 @@ class Logger {
     this.options = options;
   }
 
+  warn(...args: any[]): void {
+    console.warn(...args);
+  }
+
   debug(...args: any[]): void {
     if (this.options.verbose === '2') {
       console.log(...args);

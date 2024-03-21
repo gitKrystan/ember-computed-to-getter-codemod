@@ -1,0 +1,16 @@
+{
+  "logs": [
+    [
+      "warn",
+      "`aliasUntracked` getter relies on untracked property: `untracked`"
+    ],
+    [
+      "warn",
+      "`aliasUncompatGetter` getter relies on untracked getter: `uncompatGetter`"
+    ],
+    [
+      "warn",
+      "`aliasUnknown` getter relies on unknown property that may not be tracked: `unknown`"
+    ]
+  ]
+}
