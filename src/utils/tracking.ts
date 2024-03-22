@@ -1,22 +1,32 @@
-import type { ClassMethod, Collection, JSCodeshift } from 'jscodeshift';
+import type {
+  ClassMethod,
+  Collection,
+  JSCodeshift,
+  Options,
+} from 'jscodeshift';
 import { logger } from './log';
 
 export type PropertyTrackingData = Map<
   string,
-  { type: 'property' | 'getter' | 'setter' | 'method'; tracked: boolean }
+  { type?: 'property' | 'getter' | 'setter' | 'method'; tracked: boolean }
 >;
 
 export function parsePropertyTracking(
   j: JSCodeshift,
   root: Collection,
+  options: Options,
 ): PropertyTrackingData {
-  const properties: PropertyTrackingData = new Map();
+  const properties: PropertyTrackingData = new Map(options.propertyTracking);
 
   // Find all getters and properties and fill out the result
   root.find(j.ClassProperty).forEach((path) => {
     const property = path.value;
 
-    if ('name' in property.key && typeof property.key.name === 'string') {
+    if (
+      'name' in property.key &&
+      typeof property.key.name === 'string' &&
+      !properties.has(property.key.name)
+    ) {
       properties.set(property.key.name, {
         type: 'property',
         tracked:
@@ -30,7 +40,11 @@ export function parsePropertyTracking(
   root.find(j.ClassMethod).forEach((path) => {
     const method = path.value;
 
-    if ('name' in method.key && typeof method.key.name === 'string') {
+    if (
+      'name' in method.key &&
+      typeof method.key.name === 'string' &&
+      !properties.has(method.key.name)
+    ) {
       properties.set(method.key.name, {
         type: typeFor(method.kind),
         tracked:
@@ -69,7 +83,7 @@ export function validateDependentKeyCompat(
       );
     } else if (!value.tracked) {
       logger.warn(
-        `\`${getterName}\` getter relies on untracked ${value.type}: \`${key}\``,
+        `\`${getterName}\` getter relies on untracked ${value.type ?? 'property'}: \`${key}\``,
       );
     }
   }

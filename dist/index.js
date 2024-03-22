@@ -111,11 +111,11 @@ class TransformResult {
 }
 
 // src/utils/tracking.ts
-function parsePropertyTracking(j, root) {
-  const properties = new Map;
+function parsePropertyTracking(j, root, options) {
+  const properties = new Map(options.propertyTracking);
   root.find(j.ClassProperty).forEach((path) => {
     const property = path.value;
-    if ("name" in property.key && typeof property.key.name === "string") {
+    if ("name" in property.key && typeof property.key.name === "string" && !properties.has(property.key.name)) {
       properties.set(property.key.name, {
         type: "property",
         tracked: "decorators" in property && Array.isArray(property.decorators) && property.decorators.length > 0
@@ -124,7 +124,7 @@ function parsePropertyTracking(j, root) {
   });
   root.find(j.ClassMethod).forEach((path) => {
     const method = path.value;
-    if ("name" in method.key && typeof method.key.name === "string") {
+    if ("name" in method.key && typeof method.key.name === "string" && !properties.has(method.key.name)) {
       properties.set(method.key.name, {
         type: typeFor(method.kind),
         tracked: "decorators" in method && Array.isArray(method.decorators) && method.decorators.length > 0
@@ -279,7 +279,7 @@ function transformer(fileOrCollection, api, options) {
   const existingImports = parseImports(j, root);
   if (existingImports.computed) {
     logger.debug("computed localName", existingImports.computed.localName);
-    const propertyTracking = parsePropertyTracking(j, root);
+    const propertyTracking = parsePropertyTracking(j, root, options);
     const result4 = new TransformResult;
     result4.merge(transformComputedClassMethods(j, root, existingImports, propertyTracking));
     result4.merge(transformComputedClassProperties(j, root, existingImports, propertyTracking));

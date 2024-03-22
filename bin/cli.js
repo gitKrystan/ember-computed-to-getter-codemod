@@ -7,10 +7,21 @@ import transformer from '../dist/index.js';
 
 function run(pathGlob, options) {
   const paths = globbySync(pathGlob);
+
+  if (fs.existsSync('.codemodrc.json')) {
+    const optionsFileText = fs.readFileSync('.codemodrc.json', 'utf8');
+    const optionsFromFile = JSON.parse(optionsFileText);
+    options = {
+      ...options,
+      ...optionsFromFile,
+    };
+  }
+
   if (options.verbose === '2') {
     console.log('paths', paths);
     console.log('options', options);
   }
+
   for (const filePath of paths) {
     console.log('Running transform on file:', filePath);
     const srcCode = fs.readFileSync(filePath, { encoding: 'utf-8' });

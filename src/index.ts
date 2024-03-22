@@ -31,7 +31,7 @@ export default function transformer(
   if (existingImports.computed) {
     logger.debug('computed localName', existingImports.computed.localName);
 
-    const propertyTracking = parsePropertyTracking(j, root);
+    const propertyTracking = parsePropertyTracking(j, root, options);
     const result = new TransformResult();
 
     result.merge(

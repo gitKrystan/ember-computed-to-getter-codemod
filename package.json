@@ -41,6 +41,7 @@
     "lint:prettier:fix": "prettier --write .",
     "lint:prettier": "prettier --check .",
     "lint:ts": "tsc --noEmit",
+    "prepack": "pnpm build",
     "build": "bun build ./src/index.ts --outdir ./dist"
   },
   "keywords": [
