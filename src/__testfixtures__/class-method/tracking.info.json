@@ -1,5 +1,5 @@
 {
-  "logs": [
+  "expectedLogs": [
     [
       "warn",
       "`aliasUntracked` getter relies on untracked property: `untracked`"
