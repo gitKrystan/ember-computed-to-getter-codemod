@@ -3,7 +3,7 @@ import { Option, program } from 'commander';
 import { globbySync } from 'globby';
 import jscodeshift from 'jscodeshift';
 import fs from 'node:fs';
-import transformer from '../src/index.js';
+import transformer from '../dist/index.js';
 
 function run(pathGlob, options) {
   const paths = globbySync(pathGlob);
