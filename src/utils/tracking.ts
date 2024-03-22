@@ -75,7 +75,9 @@ export function validateDependentKeyCompat(
   propertyTracking: PropertyTrackingData,
 ): void {
   for (const key of dependentKeys) {
-    const value = propertyTracking.get(key);
+    // Remove '.[]', '.id', '.length' from end of key
+    const normalized = key.replace(/(\.id|\.length|\.\[\])$/, '');
+    const value = propertyTracking.get(normalized);
 
     if (!value) {
       logger.warn(

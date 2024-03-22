@@ -145,11 +145,12 @@ var typeFor = function(kind) {
 };
 function validateDependentKeyCompat(dependentKeys, getterName, propertyTracking) {
   for (const key of dependentKeys) {
-    const value = propertyTracking.get(key);
+    const normalized = key.replace(/(\.id|\.length|\.\[\])$/, "");
+    const value = propertyTracking.get(normalized);
     if (!value) {
       logger.warn(`\`${getterName}\` getter relies on unknown property that may not be tracked: \`${key}\``);
     } else if (!value.tracked) {
-      logger.warn(`\`${getterName}\` getter relies on untracked ${value.type}: \`${key}\``);
+      logger.warn(`\`${getterName}\` getter relies on untracked ${value.type ?? "property"}: \`${key}\``);
     }
   }
 }
