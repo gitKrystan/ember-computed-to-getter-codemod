@@ -48,6 +48,7 @@ export default function transformer(
         j,
         root,
         existingImports as ExistingImportsWithComputed,
+        propertyTracking,
       ),
     );
 

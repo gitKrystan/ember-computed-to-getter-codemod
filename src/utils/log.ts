@@ -8,12 +8,12 @@ class Logger {
   }
 
   warn(...args: any[]): void {
-    console.warn(...args);
+    console.log('[WARN]', ...args);
   }
 
   debug(...args: any[]): void {
     if (this.options.verbose === '2') {
-      console.log(...args);
+      console.log('[DEBUG]', ...args);
     }
   }
 }
