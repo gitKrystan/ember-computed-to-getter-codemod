@@ -11,10 +11,7 @@ import type {
 import { IMPORTS, type ExistingImportsWithComputed } from './imports';
 import { logger } from './log';
 import { TransformResult } from './result';
-import {
-  validateDependentKeyCompat,
-  type PropertyTrackingData,
-} from './tracking';
+import { validateDependentKeyCompat, type PropertyData } from './properties';
 
 // @computed('foo', 'bar', function(), {})
 type ComputedDecorator = Decorator & {
@@ -52,7 +49,7 @@ export function transformComputedClassProperties(
   j: JSCodeshift,
   root: Collection,
   existingImportInfos: ExistingImportsWithComputed,
-  propertyTracking: PropertyTrackingData,
+  properties: PropertyData,
 ): TransformResult {
   logger.debug('transforming computed class properties');
 
@@ -76,7 +73,19 @@ export function transformComputedClassProperties(
     );
 
     if (computedDecorator) {
-      if (computedDecorator.expression.arguments.length === 1) {
+      if (
+        computedDecorator.expression.arguments.length === 1 ||
+        computedDecorator.expression.arguments
+          .slice(0, -1)
+          .every((argument) => {
+            return (
+              argument.type === 'StringLiteral' &&
+              existingImportInfos.service &&
+              properties.get(argument.value)?.type ===
+                existingImportInfos.service.localName
+            );
+          })
+      ) {
         // Replace the `@computed` decorator with `@cached`
         replaceComputedDecorator(
           j,
@@ -98,7 +107,7 @@ export function transformComputedClassProperties(
         validateDependentKeyCompat(
           dependentKeys,
           (classProperty.key as Identifier).name ?? 'unknown',
-          propertyTracking,
+          properties,
         );
         replaceComputedDecorator(
           j,

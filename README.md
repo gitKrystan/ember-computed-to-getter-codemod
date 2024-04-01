@@ -13,7 +13,7 @@ This codemod will assume all decorated properties and getters in the same file a
 ```js
 // .codemodrc.json
 {
-  "propertyTracking": [
+  "properties": [
     [
       /* property key */
       string,

@@ -1,22 +1,28 @@
 import type {
   ClassMethod,
   Collection,
+  Decorator,
   JSCodeshift,
   Options,
 } from 'jscodeshift';
 import { logger } from './log';
+import type { ExistingImportsWithComputed } from './imports';
 
-export type PropertyTrackingData = Map<
+export type PropertyData = Map<
   string,
-  { type?: 'property' | 'getter' | 'setter' | 'method'; tracked: boolean }
+  {
+    type?: 'property' | 'getter' | 'setter' | 'method' | 'service';
+    tracked: boolean;
+  }
 >;
 
-export function parsePropertyTracking(
+export function parseProperties(
   j: JSCodeshift,
   root: Collection,
+  existingImportInfos: ExistingImportsWithComputed,
   options: Options,
-): PropertyTrackingData {
-  const properties: PropertyTrackingData = new Map(options.propertyTracking);
+): PropertyData {
+  const properties: PropertyData = new Map(options.properties);
 
   // Find all getters and properties and fill out the result
   root.find(j.ClassProperty).forEach((path) => {
@@ -27,12 +33,21 @@ export function parsePropertyTracking(
       typeof property.key.name === 'string' &&
       !properties.has(property.key.name)
     ) {
+      const decorators =
+        'decorators' in property && Array.isArray(property.decorators)
+          ? (property.decorators as Decorator[])
+          : [];
+      const type = decorators.some(
+        (decorator) =>
+          decorator.expression.type === 'Identifier' &&
+          existingImportInfos.service &&
+          decorator.expression.name === existingImportInfos.service.localName,
+      )
+        ? 'service'
+        : 'property';
       properties.set(property.key.name, {
-        type: 'property',
-        tracked:
-          'decorators' in property &&
-          Array.isArray(property.decorators) &&
-          property.decorators.length > 0,
+        type,
+        tracked: decorators.length > 0,
       });
     }
   });
@@ -72,12 +87,12 @@ function typeFor(kind: ClassMethod['kind']): 'getter' | 'setter' | 'method' {
 export function validateDependentKeyCompat(
   dependentKeys: string[],
   getterName: string,
-  propertyTracking: PropertyTrackingData,
+  properties: PropertyData,
 ): void {
   for (const key of dependentKeys) {
     // Remove '.[]', '.id', '.length' from end of key
     const normalized = key.replace(/(\.id|\.length|\.\[\])$/, '');
-    const value = propertyTracking.get(normalized);
+    const value = properties.get(normalized);
 
     if (!value) {
       logger.warn(

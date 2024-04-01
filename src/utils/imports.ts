@@ -20,6 +20,10 @@ export const IMPORTS = {
     importedName: 'dependentKeyCompat' as const,
     sourceValue: '@ember/object/compat' as const,
   },
+  service: {
+    importedName: 'service' as const, // TODO: Handle `inject as service`
+    sourceValue: '@ember/service' as const,
+  },
 };
 export type IMPORT_INFO = typeof IMPORTS;
 export type Import = IMPORT_INFO[keyof IMPORT_INFO];
@@ -36,6 +40,7 @@ interface ExistingImports {
   computed: ExistingImport | null;
   cached: ExistingImport | null;
   dependentKeyCompat: ExistingImport | null;
+  service: ExistingImport | null;
 }
 
 export interface ExistingImportsWithComputed extends ExistingImports {
@@ -53,6 +58,7 @@ export function parseImports(
     computed: null,
     cached: null,
     dependentKeyCompat: null,
+    service: null,
   };
 
   root.find(j.ImportDeclaration).forEach((path) => {
@@ -77,6 +83,14 @@ export function parseImports(
         path,
         IMPORTS.dependentKeyCompat.importedName,
         IMPORTS.dependentKeyCompat.sourceValue,
+      );
+    }
+
+    if (infos.service === null) {
+      infos.service = parseImport(
+        path,
+        IMPORTS.service.importedName,
+        IMPORTS.service.sourceValue,
       );
     }
   });

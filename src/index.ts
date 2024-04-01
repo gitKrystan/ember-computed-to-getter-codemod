@@ -10,7 +10,7 @@ import {
 } from './utils/imports';
 import { logger } from './utils/log';
 import { TransformResult } from './utils/result';
-import { parsePropertyTracking } from './utils/tracking';
+import { parseProperties } from './utils/properties';
 
 export default function transformer(
   fileOrCollection: FileInfo | Collection,
@@ -31,7 +31,12 @@ export default function transformer(
   if (existingImports.computed) {
     logger.debug('computed localName', existingImports.computed.localName);
 
-    const propertyTracking = parsePropertyTracking(j, root, options);
+    const properties = parseProperties(
+      j,
+      root,
+      existingImports as ExistingImportsWithComputed,
+      options,
+    );
     const result = new TransformResult();
 
     result.merge(
@@ -39,7 +44,7 @@ export default function transformer(
         j,
         root,
         existingImports as ExistingImportsWithComputed,
-        propertyTracking,
+        properties,
       ),
     );
 
@@ -48,7 +53,7 @@ export default function transformer(
         j,
         root,
         existingImports as ExistingImportsWithComputed,
-        propertyTracking,
+        properties,
       ),
     );
 

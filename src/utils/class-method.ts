@@ -10,10 +10,7 @@ import type {
 import { IMPORTS, type ExistingImportsWithComputed } from './imports';
 import { logger } from './log';
 import { TransformResult } from './result';
-import {
-  validateDependentKeyCompat,
-  type PropertyTrackingData,
-} from './tracking';
+import { validateDependentKeyCompat, type PropertyData } from './properties';
 
 // @computed('foo', 'bar')
 type ComputedCallExpressionDecorator = Decorator & {
@@ -82,7 +79,7 @@ export function transformComputedClassMethods(
   j: JSCodeshift,
   root: Collection,
   existingImportInfos: ExistingImportsWithComputed,
-  propertyTracking: PropertyTrackingData,
+  properties: PropertyData,
 ): TransformResult {
   logger.debug('transforming computed class methods');
 
@@ -107,7 +104,15 @@ export function transformComputedClassMethods(
 
     if (
       computedDecorator.expression.type === 'Identifier' ||
-      computedDecorator.expression.arguments.length === 0
+      computedDecorator.expression.arguments.length === 0 ||
+      computedDecorator.expression.arguments.every((argument) => {
+        return (
+          argument.type === 'StringLiteral' &&
+          existingImportInfos.service &&
+          properties.get(argument.value)?.type ===
+            existingImportInfos.service.localName
+        );
+      })
     ) {
       // Replace the `@computed()` decorator with `@cached`
       replaceComputedDecorator(
@@ -124,7 +129,7 @@ export function transformComputedClassMethods(
           (arg) => arg.value,
         ),
         (classMethod.key as Identifier).name ?? 'unknown',
-        propertyTracking,
+        properties,
       );
       replaceComputedDecorator(
         j,
