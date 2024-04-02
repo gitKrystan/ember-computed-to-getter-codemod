@@ -11,6 +11,7 @@ class Foo {
     return this.bar;
   }
 
+  @cached
   @dependentKeyCompat
   get aliasAliasBar() {
     return this.bar && this.aliasBar;

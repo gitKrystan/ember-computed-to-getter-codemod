@@ -72,91 +72,90 @@ export function transformComputedClassProperties(
       isComputedDecoratorForClassProperty,
     );
 
-    if (computedDecorator) {
-      if (
-        computedDecorator.expression.arguments.length === 1 ||
-        computedDecorator.expression.arguments
-          .slice(0, -1)
-          .every((argument) => {
-            return (
-              argument.type === 'StringLiteral' &&
-              existingImportInfos.service &&
-              properties.get(argument.value)?.type ===
-                existingImportInfos.service.localName
-            );
-          })
-      ) {
-        // Replace the `@computed` decorator with `@cached`
-        replaceComputedDecorator(
-          j,
-          computedDecorator,
-          classProperty,
-          existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName,
+    if (!computedDecorator) {
+      return;
+    }
+
+    const cachedName =
+      existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName;
+    const dependentKeyCompatName =
+      existingImportInfos.dependentKeyCompat?.localName ??
+      IMPORTS.dependentKeyCompat.importedName;
+
+    if (
+      computedDecorator.expression.arguments.length === 1 ||
+      computedDecorator.expression.arguments.slice(0, -1).every((argument) => {
+        return (
+          argument.type === 'StringLiteral' &&
+          existingImportInfos.service &&
+          properties.get(argument.value)?.type ===
+            existingImportInfos.service.localName
         );
-        result.importsToAdd.add(IMPORTS.cached);
-      } else {
-        // Replace the `@computed` decorator with `@dependentKeyCompat`
-        // prettier-ignore
-        const dependentKeys = computedDecorator.expression.arguments
+      })
+    ) {
+      // Replace the `@computed` decorator with `@cached`
+      replaceComputedDecorator(j, computedDecorator, classProperty, [
+        cachedName,
+      ]);
+      result.importsToAdd.add(IMPORTS.cached);
+    } else {
+      // Replace the `@computed` decorator with `@dependentKeyCompat`
+      // prettier-ignore
+      const dependentKeys = computedDecorator.expression.arguments
           .reduce<string[]>((acc, arg) => {
             if (arg.type === 'StringLiteral') {
               acc.push(arg.value);
             }
             return acc;
           }, []);
-        validateDependentKeyCompat(
-          dependentKeys,
-          (classProperty.key as Identifier).name ?? 'unknown',
-          properties,
-        );
-        replaceComputedDecorator(
-          j,
-          computedDecorator,
-          classProperty,
-          existingImportInfos.dependentKeyCompat?.localName ??
-            IMPORTS.dependentKeyCompat.importedName,
-        );
-        result.importsToAdd.add(IMPORTS.dependentKeyCompat);
-      }
-
-      const functionExpressionCopy: Partial<FunctionExpression> &
-        Pick<FunctionExpression, 'body'> = {
-        ...(computedDecorator.expression.arguments.at(
-          -1,
-        ) as FunctionExpression),
-      };
-      delete functionExpressionCopy.type;
-
-      const comments = Array.from(
-        new Set([
-          ...(computedDecorator.comments ?? []),
-          // @ts-expect-error jscodeshift types are wrong
-          ...(functionExpressionCopy.leadingComments ?? []),
-          // @ts-expect-error jscodeshift types are wrong
-          ...(functionExpressionCopy.trailingComments ?? []),
-          ...(classProperty.comments ?? []),
-          // @ts-expect-error jscodeshift types are wrong
-          ...(classProperty.key.leadingComments ?? []),
-        ]),
-      ).sort((a, b) => {
-        if (a.loc && b.loc) {
-          return a.loc.start.line - b.loc.start.line;
-        } else {
-          return 0;
-        }
-      });
-
-      // Replace the ClassProperty with a getter containing the body from the FunctionExpression pulled out of the ComputedDecoratorForClassProperty
-      const getter = j.classMethod.from({
-        ...functionExpressionCopy,
-        kind: 'get',
-        key: { ...classProperty.key, comments: null },
-        params: [],
-        decorators: classProperty.decorators,
-        comments,
-      });
-      path.replace(getter);
+      validateDependentKeyCompat(
+        dependentKeys,
+        (classProperty.key as Identifier).name ?? 'unknown',
+        properties,
+      );
+      replaceComputedDecorator(j, computedDecorator, classProperty, [
+        cachedName,
+        dependentKeyCompatName,
+      ]);
+      result.importsToAdd.add(IMPORTS.cached);
+      result.importsToAdd.add(IMPORTS.dependentKeyCompat);
     }
+
+    const functionExpressionCopy: Partial<FunctionExpression> &
+      Pick<FunctionExpression, 'body'> = {
+      ...(computedDecorator.expression.arguments.at(-1) as FunctionExpression),
+    };
+    delete functionExpressionCopy.type;
+
+    const comments = Array.from(
+      new Set([
+        ...(computedDecorator.comments ?? []),
+        // @ts-expect-error jscodeshift types are wrong
+        ...(functionExpressionCopy.leadingComments ?? []),
+        // @ts-expect-error jscodeshift types are wrong
+        ...(functionExpressionCopy.trailingComments ?? []),
+        ...(classProperty.comments ?? []),
+        // @ts-expect-error jscodeshift types are wrong
+        ...(classProperty.key.leadingComments ?? []),
+      ]),
+    ).sort((a, b) => {
+      if (a.loc && b.loc) {
+        return a.loc.start.line - b.loc.start.line;
+      } else {
+        return 0;
+      }
+    });
+
+    // Replace the ClassProperty with a getter containing the body from the FunctionExpression pulled out of the ComputedDecoratorForClassProperty
+    const getter = j.classMethod.from({
+      ...functionExpressionCopy,
+      kind: 'get',
+      key: { ...classProperty.key, comments: null },
+      params: [],
+      decorators: classProperty.decorators,
+      comments,
+    });
+    path.replace(getter);
   });
 
   return result;
@@ -166,7 +165,7 @@ function replaceComputedDecorator(
   j: JSCodeshift,
   computedDecorator: ComputedDecorator,
   classProperty: ClassProperty,
-  newDecoratorName: string,
+  newDecoratorNames: string[],
 ): void {
   // HACK jscodeshift ClassProperty types don't know about the decorators key, but it's there
   if (!('decorators' in classProperty) || !classProperty.decorators) {
@@ -175,11 +174,13 @@ function replaceComputedDecorator(
     );
   }
 
-  const dependentKeyCompat = j.decorator(j.identifier(newDecoratorName));
+  const newDecorators = newDecoratorNames.map((newDecoratorName) =>
+    j.decorator(j.identifier(newDecoratorName)),
+  );
 
   (classProperty.decorators as Decorator[]).splice(
     (classProperty.decorators as Decorator[]).indexOf(computedDecorator),
     1,
-    dependentKeyCompat,
+    ...newDecorators,
   );
 }

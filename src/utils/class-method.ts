@@ -102,6 +102,12 @@ export function transformComputedClassMethods(
       return;
     }
 
+    const cachedName =
+      existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName;
+    const dependentKeyCompatName =
+      existingImportInfos.dependentKeyCompat?.localName ??
+      IMPORTS.dependentKeyCompat.importedName;
+
     if (
       computedDecorator.expression.type === 'Identifier' ||
       computedDecorator.expression.arguments.length === 0 ||
@@ -115,15 +121,10 @@ export function transformComputedClassMethods(
       })
     ) {
       // Replace the `@computed()` decorator with `@cached`
-      replaceComputedDecorator(
-        j,
-        computedDecorator,
-        classMethod,
-        existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName,
-      );
+      replaceComputedDecorator(j, computedDecorator, classMethod, [cachedName]);
       result.importsToAdd.add(IMPORTS.cached);
     } else {
-      // Replace the `@computed(...string[])` decorator with `@dependentKeyCompat`
+      // Replace the `@computed(...string[])` decorator with `@cached` & `@dependentKeyCompat`
       validateDependentKeyCompat(
         (computedDecorator.expression.arguments as StringLiteral[]).map(
           (arg) => arg.value,
@@ -131,13 +132,11 @@ export function transformComputedClassMethods(
         (classMethod.key as Identifier).name ?? 'unknown',
         properties,
       );
-      replaceComputedDecorator(
-        j,
-        computedDecorator,
-        classMethod,
-        existingImportInfos.dependentKeyCompat?.localName ??
-          IMPORTS.dependentKeyCompat.importedName,
-      );
+      replaceComputedDecorator(j, computedDecorator, classMethod, [
+        cachedName,
+        dependentKeyCompatName,
+      ]);
+      result.importsToAdd.add(IMPORTS.cached);
       result.importsToAdd.add(IMPORTS.dependentKeyCompat);
     }
   });
@@ -151,7 +150,7 @@ function replaceComputedDecorator(
     | ComputedCallExpressionDecorator
     | ComputedIdentifierDecorator,
   classMethod: ClassMethod,
-  newDecoratorName: string,
+  newDecoratorNames: string[],
 ): void {
   if (!classMethod.decorators) {
     throw new Error(
@@ -159,14 +158,17 @@ function replaceComputedDecorator(
     );
   }
 
-  const dependentKeyCompat = j.decorator.from({
-    expression: j.identifier(newDecoratorName),
-    comments: computedDecorator.comments ?? null,
-  });
+  const newDecorators = newDecoratorNames.map((newDecoratorName) =>
+    j.decorator.from({
+      expression: j.identifier(newDecoratorName),
+    }),
+  );
+
+  newDecorators[0].comments = computedDecorator.comments ?? null;
 
   classMethod.decorators.splice(
     classMethod.decorators.indexOf(computedDecorator),
     1,
-    dependentKeyCompat,
+    ...newDecorators,
   );
 }

@@ -1,4 +1,6 @@
 import { attr } from '@ember-data/model';
+
+import { cached } from '@glimmer/tracking';
 import { dependentKeyCompat } from '@ember/object/compat';
 
 class Foo {
@@ -9,6 +11,7 @@ class Foo {
   // FunctionExpression trailing
   // Decorator inline
   // Key leading / Decorator trailing
+  @cached
   @dependentKeyCompat
   get aliasBar() {
     // FunctionExpression within

@@ -190,28 +190,34 @@ function transformComputedClassMethods(j, root, existingImportInfos, properties2
     if (!computedDecorator) {
       return;
     }
+    const cachedName = existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName;
+    const dependentKeyCompatName = existingImportInfos.dependentKeyCompat?.localName ?? IMPORTS.dependentKeyCompat.importedName;
     if (computedDecorator.expression.type === "Identifier" || computedDecorator.expression.arguments.length === 0 || computedDecorator.expression.arguments.every((argument) => {
       return argument.type === "StringLiteral" && existingImportInfos.service && properties2.get(argument.value)?.type === existingImportInfos.service.localName;
     })) {
-      replaceComputedDecorator(j, computedDecorator, classMethod, existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName);
+      replaceComputedDecorator(j, computedDecorator, classMethod, [cachedName]);
       result2.importsToAdd.add(IMPORTS.cached);
     } else {
       validateDependentKeyCompat(computedDecorator.expression.arguments.map((arg) => arg.value), classMethod.key.name ?? "unknown", properties2);
-      replaceComputedDecorator(j, computedDecorator, classMethod, existingImportInfos.dependentKeyCompat?.localName ?? IMPORTS.dependentKeyCompat.importedName);
+      replaceComputedDecorator(j, computedDecorator, classMethod, [
+        cachedName,
+        dependentKeyCompatName
+      ]);
+      result2.importsToAdd.add(IMPORTS.cached);
       result2.importsToAdd.add(IMPORTS.dependentKeyCompat);
     }
   });
   return result2;
 }
-var replaceComputedDecorator = function(j, computedDecorator, classMethod, newDecoratorName) {
+var replaceComputedDecorator = function(j, computedDecorator, classMethod, newDecoratorNames) {
   if (!classMethod.decorators) {
     throw new Error("trying to replace a decorator on a method without decorators");
   }
-  const dependentKeyCompat = j.decorator.from({
-    expression: j.identifier(newDecoratorName),
-    comments: computedDecorator.comments ?? null
-  });
-  classMethod.decorators.splice(classMethod.decorators.indexOf(computedDecorator), 1, dependentKeyCompat);
+  const newDecorators = newDecoratorNames.map((newDecoratorName) => j.decorator.from({
+    expression: j.identifier(newDecoratorName)
+  }));
+  newDecorators[0].comments = computedDecorator.comments ?? null;
+  classMethod.decorators.splice(classMethod.decorators.indexOf(computedDecorator), 1, ...newDecorators);
 };
 
 // src/utils/class-property.ts
@@ -231,59 +237,68 @@ function transformComputedClassProperties(j, root, existingImportInfos, properti
     }
     const classProperty = value;
     const computedDecorator = classProperty.decorators.find(isComputedDecoratorForClassProperty);
-    if (computedDecorator) {
-      if (computedDecorator.expression.arguments.length === 1 || computedDecorator.expression.arguments.slice(0, -1).every((argument) => {
-        return argument.type === "StringLiteral" && existingImportInfos.service && properties3.get(argument.value)?.type === existingImportInfos.service.localName;
-      })) {
-        replaceComputedDecorator2(j, computedDecorator, classProperty, existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName);
-        result3.importsToAdd.add(IMPORTS.cached);
-      } else {
-        const dependentKeys = computedDecorator.expression.arguments.reduce((acc, arg) => {
-          if (arg.type === "StringLiteral") {
-            acc.push(arg.value);
-          }
-          return acc;
-        }, []);
-        validateDependentKeyCompat(dependentKeys, classProperty.key.name ?? "unknown", properties3);
-        replaceComputedDecorator2(j, computedDecorator, classProperty, existingImportInfos.dependentKeyCompat?.localName ?? IMPORTS.dependentKeyCompat.importedName);
-        result3.importsToAdd.add(IMPORTS.dependentKeyCompat);
-      }
-      const functionExpressionCopy = {
-        ...computedDecorator.expression.arguments.at(-1)
-      };
-      delete functionExpressionCopy.type;
-      const comments = Array.from(new Set([
-        ...computedDecorator.comments ?? [],
-        ...functionExpressionCopy.leadingComments ?? [],
-        ...functionExpressionCopy.trailingComments ?? [],
-        ...classProperty.comments ?? [],
-        ...classProperty.key.leadingComments ?? []
-      ])).sort((a, b) => {
-        if (a.loc && b.loc) {
-          return a.loc.start.line - b.loc.start.line;
-        } else {
-          return 0;
-        }
-      });
-      const getter = j.classMethod.from({
-        ...functionExpressionCopy,
-        kind: "get",
-        key: { ...classProperty.key, comments: null },
-        params: [],
-        decorators: classProperty.decorators,
-        comments
-      });
-      path.replace(getter);
+    if (!computedDecorator) {
+      return;
     }
+    const cachedName = existingImportInfos.cached?.localName ?? IMPORTS.cached.importedName;
+    const dependentKeyCompatName = existingImportInfos.dependentKeyCompat?.localName ?? IMPORTS.dependentKeyCompat.importedName;
+    if (computedDecorator.expression.arguments.length === 1 || computedDecorator.expression.arguments.slice(0, -1).every((argument) => {
+      return argument.type === "StringLiteral" && existingImportInfos.service && properties3.get(argument.value)?.type === existingImportInfos.service.localName;
+    })) {
+      replaceComputedDecorator2(j, computedDecorator, classProperty, [
+        cachedName
+      ]);
+      result3.importsToAdd.add(IMPORTS.cached);
+    } else {
+      const dependentKeys = computedDecorator.expression.arguments.reduce((acc, arg) => {
+        if (arg.type === "StringLiteral") {
+          acc.push(arg.value);
+        }
+        return acc;
+      }, []);
+      validateDependentKeyCompat(dependentKeys, classProperty.key.name ?? "unknown", properties3);
+      replaceComputedDecorator2(j, computedDecorator, classProperty, [
+        cachedName,
+        dependentKeyCompatName
+      ]);
+      result3.importsToAdd.add(IMPORTS.cached);
+      result3.importsToAdd.add(IMPORTS.dependentKeyCompat);
+    }
+    const functionExpressionCopy = {
+      ...computedDecorator.expression.arguments.at(-1)
+    };
+    delete functionExpressionCopy.type;
+    const comments = Array.from(new Set([
+      ...computedDecorator.comments ?? [],
+      ...functionExpressionCopy.leadingComments ?? [],
+      ...functionExpressionCopy.trailingComments ?? [],
+      ...classProperty.comments ?? [],
+      ...classProperty.key.leadingComments ?? []
+    ])).sort((a, b) => {
+      if (a.loc && b.loc) {
+        return a.loc.start.line - b.loc.start.line;
+      } else {
+        return 0;
+      }
+    });
+    const getter = j.classMethod.from({
+      ...functionExpressionCopy,
+      kind: "get",
+      key: { ...classProperty.key, comments: null },
+      params: [],
+      decorators: classProperty.decorators,
+      comments
+    });
+    path.replace(getter);
   });
   return result3;
 }
-var replaceComputedDecorator2 = function(j, computedDecorator, classProperty, newDecoratorName) {
+var replaceComputedDecorator2 = function(j, computedDecorator, classProperty, newDecoratorNames) {
   if (!("decorators" in classProperty) || !classProperty.decorators) {
     throw new Error("trying to replace a decorator on a property without decorators");
   }
-  const dependentKeyCompat = j.decorator(j.identifier(newDecoratorName));
-  classProperty.decorators.splice(classProperty.decorators.indexOf(computedDecorator), 1, dependentKeyCompat);
+  const newDecorators = newDecoratorNames.map((newDecoratorName) => j.decorator(j.identifier(newDecoratorName)));
+  classProperty.decorators.splice(classProperty.decorators.indexOf(computedDecorator), 1, ...newDecorators);
 };
 
 // src/index.ts

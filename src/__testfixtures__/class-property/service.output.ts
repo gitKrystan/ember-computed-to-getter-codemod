@@ -9,7 +9,8 @@ class Foo {
   @cached
   get aliasBar() {
     return this.bar;
-  }@dependentKeyCompat
+  }@cached
+  @dependentKeyCompat
   get aliasAliasBar() {
     return this.bar && this.aliasBar;
   }
