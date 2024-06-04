@@ -6,11 +6,10 @@ import {
   parseImports,
   removeImport,
   type ExistingImportsWithComputed,
-  type Import,
 } from './utils/imports';
 import { logger } from './utils/log';
-import { TransformResult } from './utils/result';
 import { parseProperties } from './utils/properties';
+import { TransformResult } from './utils/result';
 
 export default function transformer(
   fileOrCollection: FileInfo | Collection,
